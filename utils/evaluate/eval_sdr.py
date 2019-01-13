@@ -16,6 +16,7 @@ import numpy as np
 from os.path import isfile, join, basename
 
 sys.path.append(os.path.dirname(sys.path[0]))
+from .est_list_prep import est_list_prep
 from sigproc.dsp import wavread
 
 
@@ -35,7 +36,8 @@ def eval_sdr(ori_dir, mdl_dir):
     es_dir = join(mdl_dir, 'wav')
     print('Compute SDR.v4 for {} ...'.format(basename(mdl_dir)))
 
-    wavs = [ f for f in os.listdir(s1_dir) if isfile(join(s1_dir, f)) ]
+    # wavs = [ f for f in os.listdir(s1_dir) if isfile(join(s1_dir, f)) ]
+    wavs = est_list_prep(es_dir)
 
     SDR = []
     FF_SDR = []
@@ -87,11 +89,11 @@ def eval_sdr(ori_dir, mdl_dir):
         else:
             MF_SDR.append(sdr)
 
-    mean_sdr = np.mean(np.array(SDR))
-    mean_ff_sdr = np.mean(np.array(FF_SDR))
-    mean_mm_sdr = np.mean(np.array(MM_SDR))
-    mean_mf_sdr = np.mean(np.array(MF_SDR))
-    mean_sg_sdr = np.mean(np.array(SG_SDR))
+    mean_sdr = np.mean(np.array(SDR)) if SDR else 0.0
+    mean_ff_sdr = np.mean(np.array(FF_SDR)) if FF_SDR else 0.0
+    mean_mm_sdr = np.mean(np.array(MM_SDR)) if MM_SDR else 0.0
+    mean_mf_sdr = np.mean(np.array(MF_SDR)) if MF_SDR else 0.0
+    mean_sg_sdr = np.mean(np.array(SG_SDR)) if SG_SDR else 0.0
 
     print('=' * 20,  'SDR.v4 (dB)', '='  * 20)
     print('The SDR for Male & Female is {:.4f}'.format(mean_mf_sdr))

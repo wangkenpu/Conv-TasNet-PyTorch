@@ -17,6 +17,7 @@ from sigproc.dsp import stft
 
 
 EPSILON = np.finfo(np.float32).eps
+MAX_FLOAT = np.finfo(np.float32).max
 
 
 def spectrum(signal,
@@ -44,6 +45,6 @@ def spectrum(signal,
     if use_power:
         feat = np.square(feat)
     if use_log:
-        feat = np.clip(feat, min=EPSILON)
+        feat = np.clip(feat, a_min=EPSILON, a_max=MAX_FLOAT)
         feat = np.log(feat)
     return feat

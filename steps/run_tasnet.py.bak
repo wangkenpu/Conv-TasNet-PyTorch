@@ -24,7 +24,7 @@ sys.path.append(os.path.join(os.path.dirname(sys.path[0])))
 sys.path.append(os.path.join(os.path.dirname(sys.path[0]), 'utils'))
 import misc.logging as logger
 from base.dataset import TimeDomainDateset
-from base.data_reader import DataReader
+from base.data_reader import DataReader # Plasase use data_reader.py.bak
 from evaluate.eval_sdr import eval_sdr
 from evaluate.eval_sdr_sources import eval_sdr_sources
 from evaluate.eval_si_sdr import eval_si_sdr
@@ -36,7 +36,6 @@ from sigproc.sigproc import wavwrite, wavread
 
 SAMPLE_RATE = 8000
 CLIP_SIZE = 4   # segmental length is 4s
-SAMPLE_LENGTH = SAMPLE_RATE * CLIP_SIZE
 
 
 def train(model, device, writer):
@@ -54,8 +53,6 @@ def train(model, device, writer):
 
     params = model.get_params(FLAGS.weight_decay)
     optimizer = optim.Adam(params, lr=FLAGS.lr)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, 'min', factor=0.5, patience=3, verbose=True)
 
     # reload previous model
     start_epoch, start_step = reload_model(model, optimizer, FLAGS.model_dir,
@@ -64,11 +61,13 @@ def train(model, device, writer):
     lr = get_learning_rate(optimizer)
 
     print('=> RRERUN', end=' ')
-    val_loss = validation(model, -1, lr, device)
+    best_loss_cv = validation(model, -1, lr, device)
     print('(Initialization)')
-    writer.add_scalar('Loss/Train', val_loss, step)
-    writer.add_scalar('Loss/Valid', val_loss, step)
+    writer.add_scalar('Loss/Train', best_loss_cv, step)
+    writer.add_scalar('Loss/Valid', best_loss_cv, step)
 
+    reject_num = 0
+    reject_bound = 3
     for epoch in range(start_epoch, FLAGS.epochs):
         # Set random seed
         torch.manual_seed(FLAGS.seed + epoch)
@@ -83,7 +82,7 @@ def train(model, device, writer):
             mix = data['mix'].to(device)
             src = data['src'].to(device)
             model.zero_grad()
-            output = data_parallel(model, (mix, SAMPLE_LENGTH))
+            output = data_parallel(model, (mix))
             loss = model.loss(output, src, device)
             loss.backward()
             optimizer.step()
@@ -97,7 +96,7 @@ def train(model, device, writer):
                 speed_avg = elapsed / (idx + 1)
                 loss_print_avg = loss_print / print_freq
                 print('Epoch {:2d}/{:2d} | batches {:4d}/{:4d} | lr {:1.3e} | '
-                      '{:2.3f} s/batch | SI-SDR {:2.3f}'.format(
+                      '{:2.3f} s/batch | SI-SNR {:2.3f}'.format(
                           epoch + 1, FLAGS.epochs, idx + 1, batch_num, lr,
                           speed_avg, 0.0 - loss_print_avg))
                 writer.add_scalar('Loss/Train', loss_print_avg, step)
@@ -107,22 +106,29 @@ def train(model, device, writer):
         speed_avg = elapsed / batch_num
         loss_total_avg = loss_total / batch_num
         print('TRAINING AVG.LOSS | epoch {:3d}/{:3d} | step {:7d} | lr  {:1.3e} | '
-              '{:2.3f} s/batch | time {:3.2f} mins | SI-SDR {:2.3f}'.format(
+              '{:2.3f} s/batch | time {:3.2f} mins | SI-SNR {:2.3f}'.format(
                   epoch + 1, FLAGS.epochs, step, lr, speed_avg, elapsed / 60.0,
                   0.0 - loss_total_avg.item()))
 
         # Do cross validation
-        val_loss = validation(model, epoch, lr, device)
-        writer.add_scalar('Loss/Valid', val_loss, step)
+        loss_cv = validation(model, epoch, lr, device)
+        writer.add_scalar('Loss/Valid', loss_cv, step)
 
-        if val_loss > scheduler.best:
+        if loss_cv > best_loss_cv:
             print('(Nnet rejected, the best SI-SDR is {:2.3f})'.format(
-                0 - scheduler.best))
+                0 - best_loss_cv))
+            reject_num = reject_num + 1
+            if reject_num >= reject_bound:
+                print('[*] NNet has been continually rejected by {} epochs. '
+                      'Halving learning rate now.'.format(reject_bound))
+                # Having learning rate
+                learning_rate_decaying(optimizer)
+                reject_num = 0
         else:
+            best_loss_cv = loss_cv
             print('(Nnet accepted)')
             save_checkpoint(model, optimizer, epoch + 1, step, FLAGS.model_dir)
-        # Decaying learning rate
-        scheduler.step(val_loss)
+            reject_num = 0
 
         sys.stdout.flush()
         start_time = datetime.datetime.now()
@@ -148,7 +154,7 @@ def validation(model, epoch, lr, device):
             src = data['src'].to(device)
             # elapsed_data = (datetime.datetime.now() - start_data).total_seconds()
             # start_ff = datetime.datetime.now()
-            output = data_parallel(model, (mix, SAMPLE_LENGTH))
+            output = data_parallel(model, (mix))
             loss = model.loss(output, src, device)
             # elapsed_ff = (datetime.datetime.now() - start_ff).total_seconds()
             loss_total = loss_total + loss.data.cpu()
@@ -160,7 +166,7 @@ def validation(model, epoch, lr, device):
         speed_avg = elapsed / batch_num
         loss_total_avg = loss_total / batch_num
     print('CROSSVAL AVG.LOSS | epoch {:3d}/{:3d} | lr {:1.3e} | '
-          '{:2.3f} s/batch | time {:2.1f} mins | SI-SDR {:2.3f}'.format(
+          '{:2.3f} s/batch | time {:2.1f} mins | SI-SNR {:2.3f}'.format(
               epoch + 1, FLAGS.epochs, lr, speed_avg, elapsed / 60.0,
               0.0 - loss_total_avg.item()),
           end=' ')
@@ -175,7 +181,8 @@ def evaluate(model, device):
     mix_scp = os.path.join(FLAGS.data_dir, 'tt', 'mix.scp')
     s1_scp = os.path.join(FLAGS.data_dir, 'tt', 's1.scp')
     s2_scp = os.path.join(FLAGS.data_dir, 'tt', 's2.scp')
-    dataset = DataReader(mix_scp, s1_scp, s2_scp)
+    segmenta_length = SAMPLE_RATE * CLIP_SIZE
+    dataset = DataReader(mix_scp, s1_scp, s2_scp, segmenta_length)
 
     total_num = len(dataset)
     save_path = os.path.join(FLAGS.model_dir, 'wav')
@@ -196,24 +203,45 @@ def evaluate(model, device):
             mix = data['mix'].to(device)
             s1 = data['s1']
             s2 = data['s2']
-            length = mix.size(-1)
-            output = model(mix, length)
+            total_length = data['total_length']
+            last_sample = data['last_sample']
+            output = model(mix)
             output1 = np.squeeze(output[:, 0, :].cpu().numpy())
             output2 = np.squeeze(output[:, 1, :].cpu().numpy())
             mix = np.squeeze(mix.cpu().numpy())
+            if last_sample:
+                if total_length < segmenta_length:
+                    output_spk1 = output1[:total_length]
+                    output_spk2 = output2[:total_length]
+                    mix_io = mix[:total_length]
+                else:
+                    cur_len = output_spk1.size
+                    output1_tmp = output1[cur_len - total_length :]
+                    output2_tmp = output2[cur_len - total_length :]
+                    output_spk1 = np.concatenate([output_spk1, output1_tmp])
+                    output_spk2 = np.concatenate([output_spk2, output2_tmp])
+                    mix_tmp = mix[cur_len - total_length :]
+                    mix_io = np.concatenate([mix_io, mix_tmp])
+            else:
+                output_spk1 = np.concatenate([output_spk1, output1])
+                output_spk2 = np.concatenate([output_spk2, output2])
+                mix_io = np.concatenate([mix_io, mix])
+                continue
             s1 = np.squeeze(s1.numpy())
             s2 = np.squeeze(s2.numpy())
             clean_s1_path = FLAGS.test_wav_dir + '/s1/' + key + '.wav'
             s1_clean = np.squeeze(wavread(clean_s1_path)[0])
-            sys.stdout.flush()
             if np.sum(s1 - s1_clean) != 0:
                 print('[*]:', key, s1, s1_clean)
                 sys.exit(0)
             save_prefix = os.path.join(save_path, key)
-            output_spk1 = output1 / np.max(np.abs(output1)) * 0.7
-            output_spk2 = output2 / np.max(np.abs(output2)) * 0.7
+            output_spk1 = output_spk1 / np.max(output_spk1) * 0.7
+            output_spk2 = output_spk2 / np.max(output_spk2) * 0.7
             wavwrite(output_spk1, SAMPLE_RATE, save_prefix + '_1.wav')
             wavwrite(output_spk2, SAMPLE_RATE, save_prefix + '_2.wav')
+            wavwrite(mix_io, SAMPLE_RATE, save_prefix + '_mix.wav')
+            wavwrite(s1, SAMPLE_RATE, save_prefix + '_s1.wav')
+            wavwrite(s2, SAMPLE_RATE, save_prefix + '_s2.wav')
             index += 1
             elapsed = (datetime.datetime.now() - start).total_seconds()
             logger.info('{:04d}/{:04d} | time = {:.3f} s'.format(
@@ -231,6 +259,7 @@ def evaluate(model, device):
 
 
 def build_model():
+    length = SAMPLE_RATE * CLIP_SIZE
     model = TasNet(
         autoencoder_channels=FLAGS.autoencoder_channels,
         autoencoder_kernel_size=FLAGS.autoencoder_kernel_size,
@@ -239,9 +268,8 @@ def build_model():
         convolution_kernel_size=FLAGS.convolution_kernel_size,
         num_blocks=FLAGS.num_blocks,
         num_repeat=FLAGS.num_repeat,
-        num_speakers=FLAGS.num_speakers,
-        normalization_type=FLAGS.normalization_type,
-        active_func=FLAGS.active_func)
+        length=length,
+        normalization_type=FLAGS.normalization_type)
     return model
 
 
@@ -367,25 +395,12 @@ if __name__ == '__main__':
         default=4,
         help='Number of repeat')
     parser.add_argument(
-        '--number-speakers',
-        dest='num_speakers',
-        type=int,
-        default=2,
-        help='Number of speakers in mixture')
-    parser.add_argument(
         '--normalization-type',
         dest='normalization_type',
         type=str,
         choices=['BN', 'cLN', 'gLN'],
         default='gLN',
         help='Normalization type')
-    parser.add_argument(
-        '--active-func',
-        dest='active_func',
-        type=str,
-        choices=['sigmoid', 'relu', 'softmax'],
-        default='relu',
-        help='activation function for masks')
     parser.add_argument(
         '--seed',
         type=int,

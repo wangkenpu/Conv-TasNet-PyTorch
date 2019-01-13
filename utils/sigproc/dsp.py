@@ -19,6 +19,7 @@ from scipy.io import wavfile
 
 MAX_INT16 = np.iinfo(np.int16).max
 EPSILON = np.finfo(np.float32).eps
+MAX_EXP = np.log(np.finfo(np.float32).max - 10.0)
 
 
 def wavread(path):
@@ -137,6 +138,7 @@ def overlap_and_add(spectrum,
         wav: synthesied output waveform
     """
     if use_log:
+        spectrum = np.clip(spectrum, a_min=None, a_max=MAX_EXP)
         spectrum = np.exp(spectrum)
     if use_power:
         spectrum = np.sqrt(spectrum)

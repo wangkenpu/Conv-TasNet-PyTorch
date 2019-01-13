@@ -27,8 +27,8 @@ def pow_norm(s1, s2):
 
 
 def si_sdr(estimated, original):
-    # estimated = remove_dc(estimated)
-    # original = remove_dc(original)
+    estimated = remove_dc(estimated)
+    original = remove_dc(original)
     target = pow_norm(estimated, original) * original / pow_np_norm(original)
     noise = estimated - target
     return 10 * np.log10(pow_np_norm(target) / pow_np_norm(noise))
