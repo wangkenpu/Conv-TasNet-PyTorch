@@ -87,9 +87,10 @@ class TimeDomainDateset(Dataset):
             mix_clipped_sample = mix_sample[sample_index : end_index]
             s1_clipped_sample = s1_sample[sample_index : end_index]
             s2_clipped_sample = s2_sample[sample_index : end_index]
+        src_clipped_sample = np.stack(
+            (s1_clipped_sample, s2_clipped_sample), axis=0).squeeze(-1)
         sample = {
             'mix': mix_clipped_sample.reshape(1, -1),
-            's1': s1_clipped_sample.reshape(1, -1),
-            's2': s2_clipped_sample.reshape(1, -1),
+            'src': src_clipped_sample.reshape(2, -1),
         }
         return sample
