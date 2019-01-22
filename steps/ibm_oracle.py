@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Copyright  2018  Microsoft Research Aisa (author: Ke Wang)
+#            2019  Northwestern Polytechnical University (author: Ke Wang)
 
 from __future__ import absolute_import
 from __future__ import division
@@ -69,7 +70,7 @@ for i in range(len(mix_wav)):
     key_s1, feat_s1 = compute_spectrum(s1_wav[i])
     key_s2, feat_s2 = compute_spectrum(s2_wav[i])
     assert key_mix == key_s1 and key_s1 == key_s2
-    mask_s1 = ibm(feat_s1, feat_s2)
+    mask_s1 = ibm(feat_s1, feat_s2, use_log, use_power)
     mask_s2 = 1 - mask_s1
     key_wav, wav = readwav(mix_wav[i])
 

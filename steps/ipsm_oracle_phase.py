@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Copyright  2018  Microsoft Research Aisa (author: Ke Wang)
+#            2019  Northwestern Polytechnical University (author: Ke Wang)
 
 from __future__ import absolute_import
 from __future__ import division
@@ -80,8 +81,8 @@ for i in range(len(mix_wav)):
     phase_mix = compute_phase(mix_wav[i])
     phase_s1 = compute_phase(s1_wav[i])
     phase_s2 = compute_phase(s2_wav[i])
-    mask_s1 = ipsm_spectrum(feat_s1, feat_mix, phase_s1, phase_mix)
-    mask_s2 = ipsm_spectrum(feat_s2, feat_mix, phase_s2, phase_mix)
+    mask_s1 = ipsm_spectrum(feat_s1, feat_mix, phase_s1, phase_mix, use_log, use_power)
+    mask_s2 = ipsm_spectrum(feat_s2, feat_mix, phase_s2, phase_mix, use_log, use_power)
     key_wav_s1, ori_wav_s1 = readwav(s1_wav[i])
     key_wav_s2, ori_wav_s2 = readwav(s2_wav[i])
     assert key_wav_s1 == key_wav_s2

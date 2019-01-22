@@ -31,8 +31,8 @@ def pow_norm(s1, s2):
 
 
 def si_sdr(estimated, original):
-    estimated = remove_dc(estimated)
-    original = remove_dc(original)
+    # estimated = remove_dc(estimated)
+    # original = remove_dc(original)
     target = pow_norm(estimated, original) * original / (pow_p_norm(original) + EPS)
     noise = estimated - target
     sdr = 10 * torch.log10(pow_p_norm(target) / (pow_p_norm(noise) + EPS) + EPS)

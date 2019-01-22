@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright  2018  Microsoft Research Aisa (author: Ke Wang)
+# Copyright  2019  Northwestern Polytechnical University (author: Ke Wang)
 
 from __future__ import absolute_import
 from __future__ import division
