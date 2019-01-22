@@ -17,6 +17,8 @@ set -euo pipefail
 #     -q all.q --num-threads 20 exp/iam_oracle_phase/iam.log python -u steps/iam_oracle_phase.py
 # /home/work_nfs/common/tools/pyqueue_asr.pl \
 #     -q all.q --num-threads 20 exp/iam_oracle_log/iam.log python -u steps/iam_oracle_log.py
+/home/work_nfs/common/tools/pyqueue_asr.pl \
+    -q all.q --num-threads 10 exp/iam_oracle_statistic_log/iam.log python -u steps/iam_oracle_statistic_log.py
 
 # IRM
 # /home/work_nfs/common/tools/pyqueue_asr.pl \
@@ -25,14 +27,12 @@ set -euo pipefail
 #     -q all.q --num-threads 20 exp/irm_oracle_phase/irm.log python -u steps/irm_oracle_phase.py
 
 # IPSM
-/home/work_nfs/common/tools/pyqueue_asr.pl \
-    -q all.q --num-threads 20 exp/ipsm_oracle/ipsm.log python -u steps/ipsm_oracle.py
+# /home/work_nfs/common/tools/pyqueue_asr.pl \
+#     -q all.q --num-threads 20 exp/ipsm_oracle/ipsm.log python -u steps/ipsm_oracle.py
 # /home/work_nfs/common/tools/pyqueue_asr.pl \
 #     -q all.q --num-threads 20 exp/ipsm_oracle_phase/ipsm.log python -u steps/ipsm_oracle_phase.py
 # /home/work_nfs/common/tools/pyqueue_asr.pl \
-#     -q all.q --num-threads 20 exp/ipsm_oracle_log/ipsm.log python -u steps/ipsm_oracle_log.py
-# /home/work_nfs/common/tools/pyqueue_asr.pl \
-#     -q all.q --num-threads 20 exp/ipsm_oracle_log_power/ipsm.log python -u steps/ipsm_oracle_log_power.py
+#     -q all.q --num-threads 10 exp/ipsm_oracle_statistic_log/ipsm.log python -u steps/ipsm_oracle_statistic_log.py
 
 # Time-Domain Mask
 # /home/work_nfs/common/tools/pyqueue_asr.pl \
