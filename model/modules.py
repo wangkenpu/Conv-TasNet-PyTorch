@@ -23,7 +23,7 @@ class Conv1dBlock(nn.Module):
 
     def __init__(self,
                  in_channels,
-                 out_channels,
+                 inner_channels,
                  kernel_size,
                  dilation,
                  stride,
@@ -31,17 +31,17 @@ class Conv1dBlock(nn.Module):
         """Depthwise convolution"""
         super(Conv1dBlock, self).__init__()
         self.conv1 = nn.Sequential(
-            Conv1d(in_channels, out_channels, kernel_size=1),
+            Conv1d(in_channels, inner_channels, kernel_size=1),
             nn.PReLU(),
         )
-        self.norm1 = normalization(norm_type, out_channels)
+        self.norm1 = normalization(norm_type, inner_channels)
         self.dconv = nn.Sequential(
-            Conv1d(out_channels, out_channels, kernel_size, stride,
-                   dilation=dilation, groups=out_channels),
+            Conv1d(inner_channels, inner_channels, kernel_size, stride,
+                   dilation=dilation, groups=inner_channels),
             nn.PReLU(),
         )
-        self.norm2 = normalization(norm_type, out_channels)
-        self.conv2 = Conv1d(out_channels, in_channels, kernel_size=1)
+        self.norm2 = normalization(norm_type, inner_channels)
+        self.conv2 = Conv1d(inner_channels, in_channels, kernel_size=1)
 
     def forward(self, sample):
         conv1 = self.conv1(sample)

@@ -7,7 +7,7 @@ set -euo pipefail
 mix_folder=data/2speakers/wav8k/min/tt/mix
 cln_floder_1=data/2speakers/wav8k/min/tt/s1
 cln_floder_2=data/2speakers/wav8k/min/tt/s2
-sep_folder=exp/tasnet_20181204_BN
+sep_folder=exp/tasnet_20181221_relu_cLN_gLN_1e-3
 
 exp_dir=${sep_folder}/examples
 

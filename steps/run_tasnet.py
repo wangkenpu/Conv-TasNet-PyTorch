@@ -55,7 +55,7 @@ def train(model, device, writer):
     params = model.get_params(FLAGS.weight_decay)
     optimizer = optim.Adam(params, lr=FLAGS.lr)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, 'min', factor=0.5, patience=3, verbose=True)
+        optimizer, 'min', factor=0.5, patience=2, verbose=True)
 
     # reload previous model
     start_epoch, start_step = reload_model(model, optimizer, FLAGS.model_dir,

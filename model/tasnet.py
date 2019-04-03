@@ -119,8 +119,8 @@ class TasNet(nn.Module):
         # print('input:', sample.shape)
         encode = self.encode(sample)
         # print('encode:', encode.shape)
-        encode = self.encode_norm(encode)
-        conv1 = self.conv1(encode)
+        conv1 = self.encode_norm(encode)
+        conv1 = self.conv1(conv1)
         # print('conv1:', conv1.shape)
         current_layer = conv1
         for conv1d_layer in self.separation:
