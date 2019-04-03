@@ -16,10 +16,7 @@ mkdir -p exp/${save_name}
 num_gpu=2
 batch_size=$[num_gpu*4]
 
-/home/work_nfs/common/tools/pyqueue_asr.pl \
-    -l hostname="!node7" -q g.q --gpu 1 --num-threads ${num_gpu} \
-    exp/${save_name}/${save_name}.log \
-    python -u steps/run_tasnet.py \
+python -u steps/run_tasnet.py \
     --decode="false" \
     --batch-size=${batch_size} \
     --learning-rate=${lr} \
