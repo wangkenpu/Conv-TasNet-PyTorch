@@ -1,4 +1,4 @@
-Conv-TasNet
+## Conv-TasNet
 A PyTorch implementation of Conv-TasNet described in ["TasNet: Surpassing Ideal Time-Frequency Masking for Speech Separation"](https://arxiv.org/abs/1809.07454).
 
 ## Results
