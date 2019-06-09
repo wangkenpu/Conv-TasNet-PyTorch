@@ -21,7 +21,7 @@ from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
 
 sys.path.append(os.path.join(os.path.dirname(sys.path[0])))
-sys.path.append(os.path.join(os.path.dirname(sys.path[0]), 'utils'))
+sys.path.append('utils')
 import misc.logging as logger
 from base.dataset import TimeDomainDateset
 from base.data_reader import DataReader
@@ -30,7 +30,7 @@ from evaluate.eval_sdr_sources import eval_sdr_sources
 from evaluate.eval_si_sdr import eval_si_sdr
 from misc.common import pp, str_to_bool
 from model.misc import save_checkpoint, reload_model, reload_for_eval
-from model.misc import learning_rate_decaying, get_learning_rate
+from model.misc import get_learning_rate
 from model.tasnet import TasNet
 from sigproc.sigproc import wavwrite, wavread
 
@@ -187,7 +187,6 @@ def evaluate(model, device):
 
     output_spk1 = np.zeros(0)
     output_spk2 = np.zeros(0)
-    mix_io = np.zeros(0)
     index = 0
     with torch.no_grad():
         for idx, data in enumerate(dataset.read()):
@@ -224,7 +223,6 @@ def evaluate(model, device):
             # Reset buffer
             output_spk1 = np.zeros(0)
             output_spk2 = np.zeros(0)
-            mix_io = np.zeros(0)
 
         elapsed = (datetime.datetime.now() - start_time).total_seconds()
         print('=> Decode done. Total time is {:.2f} mins'.format(elapsed / 60.0))
