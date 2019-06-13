@@ -7,6 +7,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import glob
 import os
 
 import torch
@@ -22,6 +23,17 @@ def save_checkpoint(model, optimizer, epoch, step, checkpoint_dir):
     with open(os.path.join(checkpoint_dir, 'checkpoint'), 'w') as f:
         f.write('model.ckpt-{}.pt'.format(epoch))
     print("=> Save checkpoint:", checkpoint_path)
+
+
+def clean_useless_model(checkpoint_dir, max_to_keep=5):
+    mdl_path = os.path.join(checkpoint_dir, 'model.ckpt-*.pt')
+    ckpt_mdl = [os.path.basename(filename) for filename in glob.glob(mdl_path)]
+    if len(ckpt_mdl) <= max_to_keep:
+        return
+    else:
+        ckpt_mdl.sort(key = lambda x: int(x[11:-3]))
+        for name in ckpt_mdl[:-max_to_keep]:
+            os.remove(os.path.join(checkpoint_dir, name))
 
 
 def reload_model(model, optimizer, checkpoint_dir, use_cuda=True):

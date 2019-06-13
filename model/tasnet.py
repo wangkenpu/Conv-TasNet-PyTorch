@@ -13,10 +13,10 @@ import sys
 import torch
 import torch.nn as nn
 
-from model.modules import Conv1d, Conv1dBlock, ConvTranspose1d, normalization
+from model.modules import Conv1dBlock, ConvTranspose1d, normalization
 
 sys.path.append(os.path.dirname(sys.path[0]) + '/utils')
-from model.show import show_model, show_params
+from model.show import show_model, show_params, compute_receptive_field
 from evaluate.si_sdr_torch import permute_si_sdr
 
 
@@ -33,7 +33,8 @@ class TasNet(nn.Module):
                  num_repeat,
                  num_speakers=2,
                  normalization_type='gLN',
-                 active_func='relu'):
+                 active_func='relu',
+                 causal=False):
         super(TasNet, self).__init__()
         self.autoencoder_channels = autoencoder_channels
         self.autoencoder_kernel_size = autoencoder_kernel_size
@@ -47,6 +48,7 @@ class TasNet(nn.Module):
         self.num_speakers = num_speakers
         self.normalization_type = normalization_type
         self.active_func = active_func
+        self.causal = causal
 
         self.encode = nn.Sequential(
             nn.Conv1d(1, autoencoder_channels,
@@ -57,8 +59,8 @@ class TasNet(nn.Module):
 
         self.encode_norm = normalization('cLN', autoencoder_channels)
 
-        self.conv1 = Conv1d(autoencoder_channels, bottleneck_channels,
-                            kernel_size=1)
+        self.conv1 = nn.Conv1d(autoencoder_channels, bottleneck_channels,
+                               kernel_size=1)
 
         self.separation = nn.ModuleList()
         for i in range(num_repeat):
@@ -66,16 +68,12 @@ class TasNet(nn.Module):
                 dilation = int(2 ** j)
                 conv = Conv1dBlock(bottleneck_channels, convolution_channels,
                                    convolution_kernel_size, dilation, self.stride,
-                                   self.normalization_type)
+                                   self.normalization_type, self.causal)
                 self.separation.append(conv)
 
-        self.conv2 = Conv1d(bottleneck_channels,
-                            autoencoder_channels * self.num_speakers,
-                            kernel_size=1)
-        # self.conv2 = nn.ModuleList([
-        #     Conv1d(bottleneck_channels, autoencoder_channels, kernel_size=1)
-        #     for _ in range(self.num_speakers)
-        # ])
+        self.conv2 = nn.Conv1d(bottleneck_channels,
+                               autoencoder_channels * self.num_speakers,
+                               kernel_size=1)
 
         # input shape [nspk, batch_size, channels, length]
         self.mask = {
@@ -90,7 +88,58 @@ class TasNet(nn.Module):
             kernel_size=self.autoencoder_kernel_size,
             stride=self.autoencoder_stride)
         show_model(self)
+        self.receptive_field(num_blocks, num_repeat)
+        compute_receptive_field(self.conv_struct)
         show_params(self)
+
+    def receptive_field(self, num_blocks, num_repeat):
+        # 'k': kernel_size
+        # 's': stride
+        # 'd': dilation
+        self.conv_struct = []
+        # Encoder
+        self.conv_struct.extend([{
+            'name': 'encoder',
+            'k': self.autoencoder_kernel_size,
+            's': self.autoencoder_stride,
+            'd': 1,
+        }])
+        # Separation
+        # conv1x1_begin
+        self.conv_struct.extend([{
+            'name': 'conv1x1_begin',
+            'k': 1,
+            's': 1,
+            'd': 1,
+        }])
+        for i in range(num_repeat):
+            for j in range(num_blocks):
+                dilation = int(2 ** j)
+                self.conv_struct.extend([{
+                    'name': 'block1d_R{}_B{}_1x1_1'.format(i + 1, j + 1),
+                    'k': 1,
+                    's': 1,
+                    'd': 1,
+                }])
+                self.conv_struct.extend([{
+                    'name': 'block1d_R{}_B{}_dconv'.format(i + 1, j + 1),
+                    'k': self.convolution_kernel_size,
+                    's': self.stride,
+                    'd': dilation,
+                }])
+                self.conv_struct.extend([{
+                    'name': 'block1d_R{}_B{}_1x1_2'.format(i + 1, j + 1),
+                    'k': 1,
+                    's': 1,
+                    'd': 1,
+                }])
+        # conv1x1_end
+        self.conv_struct.extend([{
+            'name': 'conv1x1_end',
+            'k': 1,
+            's': 1,
+            'd': 1,
+        }])
 
     def get_params(self, weight_decay):
         # add L2 penalty
@@ -125,11 +174,6 @@ class TasNet(nn.Module):
         for conv1d_layer in self.separation:
             current_layer = conv1d_layer(current_layer)
             # print('current_layer:', current_layer.shape)
-        # conv2_buffer = []
-        # for conv in self.conv2:
-        #     y = conv(current_layer)
-        #     conv2_buffer.append(y)
-        # conv2 = torch.stack(conv2_buffer, dim=0)
         # [batch_size, nspk * channels, length]
         conv2 = self.conv2(current_layer)
         batch_size, channels, dim = conv2.shape

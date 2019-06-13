@@ -30,7 +30,7 @@ from evaluate.eval_sdr_sources import eval_sdr_sources
 from evaluate.eval_si_sdr import eval_si_sdr
 from misc.common import pp, str_to_bool
 from model.misc import save_checkpoint, reload_model, reload_for_eval
-from model.misc import get_learning_rate
+from model.misc import get_learning_rate, clean_useless_model
 from model.tasnet import TasNet
 from sigproc.sigproc import wavwrite, wavread
 
@@ -126,6 +126,7 @@ def train(model, device, writer):
 
         sys.stdout.flush()
         start_time = datetime.datetime.now()
+    clean_useless_model(FLAGS.model_dir)
 
 
 def validation(model, epoch, lr, device):
@@ -239,7 +240,8 @@ def build_model():
         num_repeat=FLAGS.num_repeat,
         num_speakers=FLAGS.num_speakers,
         normalization_type=FLAGS.normalization_type,
-        active_func=FLAGS.active_func)
+        active_func=FLAGS.active_func,
+        causal=FLAGS.causal)
     return model
 
 
@@ -248,10 +250,10 @@ def main():
     model = build_model()
     model.to(device)
 
-    if FLAGS.logdir is None:
+    if FLAGS.log_dir is None:
         writer = SummaryWriter(FLAGS.model_dir + '/tensorboard')
     else:
-        writer = SummaryWriter(FLAGS.logdir)
+        writer = SummaryWriter(FLAGS.log_dir)
 
     # Training
     if not FLAGS.decode:
@@ -300,14 +302,14 @@ if __name__ == '__main__':
         default=1e-5,
         help='Weight decay for optimizer (L2 penalty)')
     parser.add_argument(
-        '--model-dir',
+        '--modelDir',
         dest='model_dir',
         type=str,
         required=True,
         help='Model directory')
     parser.add_argument(
         '--logDir',
-        dest='logdir',
+        dest='log_dir',
         type=str,
         default=None,
         help='Log directory (for tensorboard)')
@@ -395,7 +397,12 @@ if __name__ == '__main__':
         type=str,
         default='data/2speakers/wav8k/min/tt',
         help='Test data directory')
-    FLAGS, unparsed = parser.parse_known_args()
+    parser.add_argument(
+        '--causal',
+        type=str_to_bool,
+        default=False,
+        help='causal or non-causal')
+    FLAGS = parser.parse_args()
     FLAGS.use_cuda = FLAGS.use_cuda and torch.cuda.is_available()
     print('*** Parsed arguments ***')
     pp.pprint(FLAGS.__dict__)
