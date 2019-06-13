@@ -407,7 +407,7 @@ if __name__ == '__main__':
     print('*** Parsed arguments ***')
     pp.pprint(FLAGS.__dict__)
     print('*** Unparsed arguments ***')
-    pp.pprint(unparsed.__dict__)
+    pp.pprint(unparsed)
     os.makedirs(FLAGS.model_dir, exist_ok=True)
     # Set the random seed manually for reproducibility.
     np.random.seed(FLAGS.seed)
