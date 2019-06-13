@@ -402,10 +402,12 @@ if __name__ == '__main__':
         type=str_to_bool,
         default=False,
         help='causal or non-causal')
-    FLAGS = parser.parse_args()
+    FLAGS, unparsed = parser.parse_known_args()
     FLAGS.use_cuda = FLAGS.use_cuda and torch.cuda.is_available()
     print('*** Parsed arguments ***')
     pp.pprint(FLAGS.__dict__)
+    print('*** Unparsed arguments ***')
+    pp.pprint(unparsed.__dict__)
     os.makedirs(FLAGS.model_dir, exist_ok=True)
     # Set the random seed manually for reproducibility.
     np.random.seed(FLAGS.seed)
