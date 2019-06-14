@@ -79,8 +79,11 @@ def conv1d_same_padding(input,
     padding_dim = get_conv1d_padding_dim(
         length, stride, dilation, kernel_size, causal)
     if causal:
-        return F.conv1d(input, weight, bias, stride, padding=padding_dim,
-                dilation=dilation, groups=groups)[:, :, :length]
+        # input: [batch_size, channels, length]
+        p1d = (padding_dim, 0)
+        input = F.pad(input, p1d, 'constant', 0)
+        return F.conv1d(input, weight, bias, stride, padding=0,
+                dilation=dilation, groups=groups)
     else:
         return F.conv1d(input, weight, bias, stride, padding=padding_dim,
             dilation=dilation, groups=groups)

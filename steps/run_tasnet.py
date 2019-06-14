@@ -55,7 +55,7 @@ def train(model, device, writer):
     params = model.get_params(FLAGS.weight_decay)
     optimizer = optim.Adam(params, lr=FLAGS.lr)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, 'min', factor=0.5, patience=2, verbose=True)
+        optimizer, 'min', factor=0.5, patience=2, verbose=False)
 
     # reload previous model
     start_epoch, start_step = reload_model(model, optimizer, FLAGS.model_dir,
@@ -404,6 +404,7 @@ if __name__ == '__main__':
         help='causal or non-causal')
     FLAGS, unparsed = parser.parse_known_args()
     FLAGS.use_cuda = FLAGS.use_cuda and torch.cuda.is_available()
+    os.system('nvidia-smi')
     print('*** Parsed arguments ***')
     pp.pprint(FLAGS.__dict__)
     print('*** Unparsed arguments ***')

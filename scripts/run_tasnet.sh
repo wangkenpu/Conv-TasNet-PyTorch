@@ -15,7 +15,8 @@ save_name="tasnet_${date}_${active_func}_${encoder_norm_type}_${dconv_norm_type}
 mkdir -p exp/${save_name}
 
 num_gpu=1
-batch_size=$[num_gpu*4]
+batch_size_single_gpu=4
+batch_size=$[num_gpu*batch_size_single_gpu]
 
 python -u steps/run_tasnet.py \
     --decode="false" \
