@@ -9,9 +9,8 @@ data_dir="data"
 dconv_norm_type='gLN'
 active_func="relu"
 date=$(date "+%Y%m%d")
-encoder_norm_type='cLN'
 causal="false"
-save_name="tasnet_${date}_${active_func}_${encoder_norm_type}_${dconv_norm_type}_${lr}"
+save_name="tasnet_${date}_${active_func}_${dconv_norm_type}_${lr}"
 mkdir -p exp/${save_name}
 
 num_gpu=1
